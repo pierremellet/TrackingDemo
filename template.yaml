@@ -1,0 +1,206 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  A-Tracking
+
+  Sample SAM Template for A-Tracking
+  
+Globals:
+  Function:
+    Timeout: 30
+
+Resources:
+  CargoStorage:
+    Type: AWS::DynamoDB::Table
+    Properties: 
+      AttributeDefinitions: 
+        - 
+          AttributeName: "trackingNumber"
+          AttributeType: "S"
+      KeySchema: 
+        - 
+          AttributeName: "trackingNumber"
+          KeyType: "HASH" 
+      ProvisionedThroughput: 
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+  ItemStorage:
+    Type: AWS::DynamoDB::Table
+    Properties: 
+      AttributeDefinitions: 
+        - 
+          AttributeName: "trackingNumber"
+          AttributeType: "S"
+      KeySchema: 
+        - 
+          AttributeName: "trackingNumber"
+          KeyType: "HASH" 
+      ProvisionedThroughput: 
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 8
+      StreamSpecification: 
+          StreamViewType: "NEW_IMAGE"  
+  EventStorage:
+    Type: AWS::DynamoDB::Table
+    Properties:  
+      AttributeDefinitions: 
+        - 
+          AttributeName: "trackingNumber"
+          AttributeType: "S"
+        - 
+          AttributeName: "status"
+          AttributeType: "S"
+      KeySchema: 
+        - 
+          AttributeName: "trackingNumber"
+          KeyType: "HASH"
+        - 
+          AttributeName: "status"
+          KeyType: "RANGE"
+      StreamSpecification: 
+          StreamViewType: "NEW_IMAGE"    
+      ProvisionedThroughput: 
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 12
+  ReceivedEventStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      ShardCount: 1 
+  ItemCompletionRequestStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      ShardCount: 1            
+  EventReceiverFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      Handler: src/handlers/put-received-event.handler
+      Runtime: nodejs12.x
+      Policies:
+        - KinesisCrudPolicy:
+            StreamName: !Ref ReceivedEventStream
+      Environment:
+        Variables:
+          OUTPUT_STREAM: !Ref ReceivedEventStream
+      Events:
+        ReceivedEvent:
+          Type: Api 
+          Properties:
+            Path: /
+            Method: post
+  GetItemFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      Handler: src/handlers/get-item.handler
+      Runtime: nodejs12.x
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ItemStorage
+      Environment:
+        Variables:
+          ITEM_STORE_TABLE: !Ref ItemStorage
+      Events:
+        ReceivedEvent:
+          Type: Api 
+          Properties:
+            Path: /items/{trackingNumber}
+            Method: get   
+  ReplayItemFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      Handler: src/handlers/write-event.replayItemHandler
+      Runtime: nodejs12.x
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ItemStorage
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EventStorage
+      Environment:
+        Variables:
+          ITEM_STORE_TABLE: !Ref ItemStorage
+          EVENT_STORE_TABLE: !Ref EventStorage
+      Events:
+        ReceivedEvent:
+          Type: Api 
+          Properties:
+            Path: /replay/items/{trackingNumber}
+            Method: post                        
+  ProjectionsFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      Handler: src/handlers/write-event.projectionsHandler
+      Runtime: nodejs12.x
+      Timeout: 60
+      Tracing: Active
+      MemorySize: 128
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ItemStorage
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EventStorage
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CargoStorage
+        - KinesisCrudPolicy:
+            StreamName: !Ref ItemCompletionRequestStream
+      Environment:
+        Variables:
+          ITEM_STORE_TABLE: !Ref ItemStorage
+          EVENT_STORE_TABLE: !Ref EventStorage
+          CARGO_STORE_TABLE: !Ref CargoStorage
+          COMPLETION_REQUEST_STREAM: !Ref ItemCompletionRequestStream
+      Events:
+        Stream:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt EventStorage.StreamArn
+            StartingPosition: TRIM_HORIZON
+            BatchSize: 25
+            MaximumRetryAttempts: 3
+            ParallelizationFactor: 3 
+  PumpEventFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      Handler: src/handlers/pump-event.handler
+      Runtime: nodejs12.x
+      Timeout: 30
+      Tracing: Active
+      MemorySize: 128
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EventStorage
+        - KinesisCrudPolicy:
+            StreamName: !Ref ReceivedEventStream
+      Environment:
+        Variables:
+          EVENT_STORE_TABLE: !Ref EventStorage
+      Events:
+        Stream:
+          Type: Kinesis
+          Properties:
+            Stream: !GetAtt ReceivedEventStream.Arn
+            BatchSize: 5
+            ParallelizationFactor: 2
+            StartingPosition: LATEST 
+  ItemCompletionFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      Handler: src/handlers/item-completion.handler
+      Runtime: nodejs12.x
+      Timeout: 30
+      Tracing: Active
+      MemorySize: 128
+      Policies:
+        - KinesisCrudPolicy:
+            StreamName: !Ref ItemCompletionRequestStream
+      Events:
+        Stream:
+          Type: Kinesis
+          Properties:
+            Stream: !GetAtt ItemCompletionRequestStream.Arn
+            BatchSize: 50
+            ParallelizationFactor: 1
+            StartingPosition: LATEST                       
+Outputs:
+  ATrackingAPI:
+    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+
