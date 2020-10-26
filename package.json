@@ -16,6 +16,7 @@
     },
     "scripts": {
         "build": "sam build",
+        "deploy": "sam deploy",
         "test": "jest"
     }
 }

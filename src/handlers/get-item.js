@@ -1,4 +1,4 @@
-import AWS from 'aws-sdk';
+const AWS = require('aws-sdk');
 
 const docClient = new AWS.DynamoDB.DocumentClient({
     maxRetries: 2
@@ -6,7 +6,7 @@ const docClient = new AWS.DynamoDB.DocumentClient({
 
 const tableName = process.env.ITEM_STORE_TABLE;
 
-export const handler = async (/*APIGatewayEvent*/ event) => {
+exports.handler = async (/*APIGatewayEvent*/ event) => {
  
     if(event.pathParameters == null){
         throw new Error("Missing parameter");

@@ -1,13 +1,17 @@
 const request = require('request')
 const https = require('https')
 
+const endpointURL = process.argv[2];
+
+console.log(endpointURL);
+
 function sendEvent(event) {
 
   const data = JSON.stringify(event);
 
 
   const options = {
-    hostname: 'eo3bcsvs3a.execute-api.eu-west-3.amazonaws.com',
+    hostname: endpointURL,
     port: 443,
     path: '/Prod/',
     method: 'POST',
@@ -101,10 +105,9 @@ async function run() {
   for (var i = 0; i < eventsCatalogue.length; i++) {
     console.log(JSON.stringify(eventsCatalogue[i]));    
     sendEvent(eventsCatalogue[i]);
-    await sleep(25);
+    await sleep(100);
   }
   return "done";
 }
   
-
 run().then(res => console.log(res)).catch(err => console.error(err));
