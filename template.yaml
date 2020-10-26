@@ -60,8 +60,8 @@ Resources:
       StreamSpecification: 
           StreamViewType: "NEW_IMAGE"    
       ProvisionedThroughput: 
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 12
+        ReadCapacityUnits: 20
+        WriteCapacityUnits: 20
   ReceivedEventStream:
     Type: AWS::Kinesis::Stream
     Properties:
