@@ -95,7 +95,6 @@ async function replayItem(trackingNumber) {
                         cargoEventList.push(item);
                     }
                 }
-                console.info("CargoEventList : " + JSON.stringify(cargoEventList));
             }
         }
     }
@@ -151,55 +150,60 @@ exports.projectionsHandler = async (event) => {
         const trackingNumber = evt.trackingNumber;
 
         if (evt.eventType == 'ITEM') {
-            const aggItem = await replayItem(trackingNumber);
-            var params = {
-                Item: aggItem
-            };
 
             const existing = itemsPutRequest
                 .filter(pr => pr.PutRequest.Item)
                 .map(pr => pr.PutRequest.Item)
-                .filter(item => (item).trackingNumber == aggItem.trackingNumber).length;
+                .filter(item => (item).trackingNumber == trackingNumber).length;
 
             if (existing == 0) {
+                const aggItem = await replayItem(trackingNumber);
+                var params = {
+                    Item: aggItem
+                };
+
+
                 itemsPutRequest.push({
                     PutRequest: params
                 });
-            }
 
-            if(aggItem.needItemCompletion){
-                const record /*Kinesis.PutRecordInput*/ = {
-                    Data: JSON.stringify(aggItem),
-                    StreamName: completionStreamName,
-                    PartitionKey: aggItem.trackingNumber
-                };
-        
-                await kinesisClient.putRecord(record,
-                    (err, data) => {
-                        console.info("PutRecord : " + JSON.stringify(data));
-                        if (err) {
-                            console.error(err);
-                            response.statusCode = 400;
+                if (aggItem.needItemCompletion) {
+                    const record /*Kinesis.PutRecordInput*/ = {
+                        Data: JSON.stringify(aggItem),
+                        StreamName: completionStreamName,
+                        PartitionKey: aggItem.trackingNumber
+                    };
+
+                    await kinesisClient.putRecord(record,
+                        (err, data) => {
+                            console.info("PutRecord : " + JSON.stringify(data));
+                            if (err) {
+                                console.error(err);
+                                response.statusCode = 400;
+                            }
                         }
-                    }
-                ).promise();
-        
+                    ).promise();
+
+                }
+
             }
         }
 
         if (evt.eventType == 'CARGO') {
             console.info("Process CARGO " + trackingNumber);
-            const aggCargo = await replayCargo(trackingNumber);
-            var params = {
-                Item: aggCargo
-            };
 
-            const existing = itemsPutRequest
+            const existing = cargoPutRequest
                 .filter(pr => pr.PutRequest.Item)
                 .map(pr => pr.PutRequest.Item)
-                .filter(item => (item).trackingNumber == aggCargo.trackingNumber).length;
+                .filter(item => (item).trackingNumber == trackingNumber).length;
 
             if (existing == 0) {
+                const aggCargo = await replayCargo(trackingNumber);
+                var params = {
+                    Item: aggCargo
+                };
+
+
                 cargoPutRequest.push({
                     PutRequest: params
                 });

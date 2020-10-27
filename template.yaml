@@ -23,7 +23,7 @@ Resources:
           KeyType: "HASH" 
       ProvisionedThroughput: 
         ReadCapacityUnits: 1
-        WriteCapacityUnits: 1
+        WriteCapacityUnits: 9
   ItemStorage:
     Type: AWS::DynamoDB::Table
     Properties: 
@@ -36,8 +36,8 @@ Resources:
           AttributeName: "trackingNumber"
           KeyType: "HASH" 
       ProvisionedThroughput: 
-        ReadCapacityUnits: 1
-        WriteCapacityUnits: 8
+        ReadCapacityUnits: 10
+        WriteCapacityUnits: 9
       StreamSpecification: 
           StreamViewType: "NEW_IMAGE"  
   EventStorage:
@@ -60,8 +60,8 @@ Resources:
       StreamSpecification: 
           StreamViewType: "NEW_IMAGE"    
       ProvisionedThroughput: 
-        ReadCapacityUnits: 20
-        WriteCapacityUnits: 20
+        ReadCapacityUnits: 10 
+        WriteCapacityUnits: 50
   ReceivedEventStream:
     Type: AWS::Kinesis::Stream
     Properties:
@@ -177,8 +177,8 @@ Resources:
           Type: Kinesis
           Properties:
             Stream: !GetAtt ReceivedEventStream.Arn
-            BatchSize: 5
-            ParallelizationFactor: 2
+            BatchSize: 50
+            ParallelizationFactor: 5
             StartingPosition: LATEST 
   ItemCompletionFunction:
     Type: AWS::Serverless::Function 
