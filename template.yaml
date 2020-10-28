@@ -155,7 +155,7 @@ Resources:
             StartingPosition: TRIM_HORIZON
             BatchSize: 25
             MaximumRetryAttempts: 3
-            ParallelizationFactor: 3 
+            ParallelizationFactor: 2
   PumpEventFunction:
     Type: AWS::Serverless::Function 
     Properties:
@@ -177,8 +177,8 @@ Resources:
           Type: Kinesis
           Properties:
             Stream: !GetAtt ReceivedEventStream.Arn
-            BatchSize: 50
-            ParallelizationFactor: 5
+            BatchSize: 500
+            ParallelizationFactor: 2
             StartingPosition: LATEST 
   ItemCompletionFunction:
     Type: AWS::Serverless::Function 

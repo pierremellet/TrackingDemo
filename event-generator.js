@@ -127,7 +127,7 @@ function requestItem(seed){
 
 async function run() {
 
-  for (var i = 8047; i < 4000000; i++) {
+  for (var i = 1; i < 4000000; i++) {
     var events = generateEvents(i);
     for (var event of events) {
       console.log(JSON.stringify(event));
