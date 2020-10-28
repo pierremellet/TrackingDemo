@@ -25,7 +25,10 @@ exports.handler = async (/*APIGatewayEvent*/ event) => {
      return {
         isBase64Encoded: false,
         statusCode: 200,
-        headers: {},
+        headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET"
+        },
         body: JSON.stringify(data.Item)
     };
 

@@ -128,7 +128,11 @@ exports.replayItemHandler = async (event) => {
     return {
         isBase64Encoded: false,
         statusCode: 200,
-        headers: {},
+        headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Methods": "POST"
+        },
         body: JSON.stringify(aggItem)
     }
 }
