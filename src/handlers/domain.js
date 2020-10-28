@@ -46,6 +46,7 @@ class ItemTrackingEvent extends TrackingEvent {
             status);
 
             this.cargoTrackingNumber = cargoTrackingNumber;
+            
     }
 }
 
@@ -117,6 +118,23 @@ class AggItem {
             this.timeline.sort((a,b)=>{
                 return a.timestamp.localeCompare(b.timestamp);
             });
+
+            this.harmonized = [];
+
+            if(this.timeline.filter(e => e.eventStatus == "SENT").length == 1){
+                this.harmonized.push("SENT");
+            }
+            if(this.timeline.filter(e => 
+                e.eventStatus == "HANDLED_BY_CARRIER"
+                || e.eventStatus == "CARGO_PACKAGED"
+                || e.eventStatus == "CARGO_GONE"
+                || e.eventStatus == "CARGO_ARRIVED"
+                ).length == 4){
+                this.harmonized.push("ON_THE_WAY");
+            }
+            if(this.timeline.filter(e => e.eventStatus == "DELIVERED").length == 1){
+                this.harmonized.push("DELIVERED");
+            }
 
         }
 
